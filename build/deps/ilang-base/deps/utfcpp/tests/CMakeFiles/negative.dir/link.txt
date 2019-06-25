@@ -1,1 +1,0 @@
-/usr/bin/c++  -g  -rdynamic CMakeFiles/negative.dir/negative.cpp.o  -o negative 

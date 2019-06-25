@@ -1,8 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file>main.qml</file>
-        <file>fonts/Monoid-Retina.ttf</file>
-        <file>Repl.qml</file>
-        <file>Editor.qml</file>
-    </qresource>
-</RCC>

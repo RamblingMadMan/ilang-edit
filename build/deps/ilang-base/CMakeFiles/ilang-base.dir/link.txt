@@ -1,2 +1,0 @@
-/usr/bin/ar qc libilang-base.a  CMakeFiles/ilang-base.dir/src/Lexer.cpp.o CMakeFiles/ilang-base.dir/src/AReal.cpp.o CMakeFiles/ilang-base.dir/src/ARatio.cpp.o CMakeFiles/ilang-base.dir/src/AInt.cpp.o CMakeFiles/ilang-base.dir/src/Expr.cpp.o CMakeFiles/ilang-base.dir/src/Type.cpp.o CMakeFiles/ilang-base.dir/src/Parser.cpp.o CMakeFiles/ilang-base.dir/src/Eval.cpp.o CMakeFiles/ilang-base.dir/src/Compiler.cpp.o CMakeFiles/ilang-base.dir/src/llvm.cpp.o
-/usr/bin/ranlib libilang-base.a
