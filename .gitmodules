@@ -1,0 +1,3 @@
+[submodule "deps/ilang-base"]
+	path = deps/ilang-base
+	url = https://github.com/RamblingMadMan/ilang-base.git
