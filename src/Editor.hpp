@@ -13,6 +13,19 @@
 #include "Highlighter.hpp"
 
 namespace ile{
+	class TextEdit: public QTextEdit{
+		public:
+			template<typename ... Args>
+			TextEdit(Args &&... args)
+				: QTextEdit(std::forward<Args>(args)...)
+				, m_highlighter(this->document()){}
+
+			Highlighter &highlighter() noexcept{ return m_highlighter; }
+
+		private:
+			Highlighter m_highlighter;
+	};
+
 	class Editor: public QWidget{
 		Q_OBJECT
 
@@ -21,7 +34,6 @@ namespace ile{
 				: QWidget(parent)
 				, monoidFont("Monoid")
 				, layout(this)
-				, highlighter(textEdit.document())
 			{
 				textEdit.setFont(monoidFont);
 				layout.addWidget(&textEdit);
@@ -30,14 +42,14 @@ namespace ile{
 			auto parse(ilang::TypeData &typeData, ilang::Ast &ast) const noexcept{
 				auto rawText = textEdit.document()->toPlainText();
 				auto rawStr = rawText.toStdString();
-				return ilang::parseAll(rawStr, typeData, ast);
+				auto toks = ilang::lexAll(rawStr);
+				return ilang::parseAll(toks, typeData, ast);
 			}
 
 		private:
 			QFont monoidFont;
 			QVBoxLayout layout;
-			QTextEdit textEdit;
-			Highlighter highlighter;
+			TextEdit textEdit;
 
 			friend class Repl;
 			friend class ReplLine;

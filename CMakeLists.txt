@@ -14,8 +14,10 @@ set(
 	ILANG_EDIT_SOURCES
 	src/Highlighter.hpp
 	src/Repl.hpp
+	src/ReplOutput.hpp
 	src/Editor.hpp
 	src/main.cpp
+
 )
 
 add_executable(ilang-edit ${ILANG_EDIT_SOURCES} ${qml_QRC})
