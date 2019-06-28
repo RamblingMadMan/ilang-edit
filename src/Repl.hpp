@@ -1,15 +1,16 @@
 #ifndef ILANG_EDIT_REPL
 #define ILANG_EDIT_REPL 1
 
+#include <cmath>
+
 #include <QWidget>
 #include <QPainter>
 #include <QApplication>
+#include <QScrollBar>
 #include <QLabel>
-#include <QTextItem>
 #include <QLineEdit>
-#include <QStyledItemDelegate>
-#include <QListWidget>
 #include <QToolButton>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -37,7 +38,6 @@ namespace ile{
 
 				setText(QString::fromStdString(detail));
 				setReadOnly(true);
-				setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
 			}
 	};
 
@@ -59,28 +59,45 @@ namespace ile{
 				QFontMetrics fontMetrics(font);
 
 				toggleButton.setToolButtonStyle(Qt::ToolButtonIconOnly);
-				toggleButton.setArrowType(Qt::ArrowType::RightArrow);
+				toggleButton.setArrowType(Qt::ArrowType::DownArrow);
 				toggleButton.setCheckable(true);
 				toggleButton.setChecked(true);
 
-				outputLabel.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+				auto spacing = int(std::floor(fontMetrics.lineSpacing() * 0.5));
+
+				outputLabel.setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 				outputLabel.setText(QString::fromStdString(inputStr));
-				outputLabel.setFixedHeight(fontMetrics.height() + (fontMetrics.lineSpacing() / 2));
+				outputLabel.setFixedHeight(fontMetrics.height() + spacing);
 				outputLabel.setReadOnly(true);
 
-				details.setFixedHeight(fontMetrics.height() * 2 + fontMetrics.lineSpacing());
+				details.setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
+				//details.setFixedHeight(fontMetrics.height() * 2 + spacing);
 
 				QObject::connect(&toggleButton, &QToolButton::clicked, [this](bool checked){
-					toggleButton.setArrowType(checked ? Qt::ArrowType::DownArrow : Qt::ArrowType::RightArrow);
-					checked ? details.show() : details.hide();
+					toggleDetails(checked);
 				});
 
 				headerLayout.addWidget(&toggleButton);
 				headerLayout.addWidget(&outputLabel);
 
+				layout.setSizeConstraint(QLayout::SetMinimumSize);
 				layout.addLayout(&headerLayout);
 				layout.addWidget(&details);
 				//layout.setSpacing(0);
+			}
+
+			void hideDetails(){
+				toggleDetails(false);
+			}
+
+			void showDetails(){
+				toggleDetails(true);
+			}
+
+			void toggleDetails(bool isShown){
+				toggleButton.setChecked(true);
+				toggleButton.setArrowType(isShown ? Qt::ArrowType::DownArrow : Qt::ArrowType::RightArrow);
+				isShown ? details.show() : details.hide();
 			}
 
 		private:
@@ -107,28 +124,60 @@ namespace ile{
 				layout.setMargin(0);
 
 				outputArea = new QWidget(this);
-				outputArea->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+				outputArea->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 				outputArea->setLayout(new QVBoxLayout(outputArea));
-				outputArea->layout()->setAlignment(Qt::AlignTop);
+				outputArea->layout()->setAlignment(Qt::AlignBottom);
 				outputArea->layout()->setMargin(0);
 				outputArea->setContentsMargins(0, 0, 0, 0);
 
 				scrollArea.setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-				scrollArea.setAlignment(Qt::AlignTop);
+				scrollArea.setAlignment(Qt::AlignBottom);
 				scrollArea.setWidgetResizable(true);
 				scrollArea.setWidget(outputArea);
 
+				minimizeAllBtn.setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+				maximizeAllBtn.setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+				minimizeAllBtn.setText("Minimize All");
+				maximizeAllBtn.setText("Maximize All");
+
+				QObject::connect(&minimizeAllBtn, &QToolButton::pressed, [this]{
+					for(int i = 0; i < outputArea->layout()->count(); i++){
+						auto obj = outputArea->layout()->itemAt(i)->widget();
+						if(auto output = dynamic_cast<ReplOutput*>(obj))
+							output->hideDetails();
+					}
+				});
+
+				QObject::connect(&maximizeAllBtn, &QToolButton::pressed, [this]{
+					for(int i = 0; i < outputArea->layout()->count(); i++){
+						auto obj = outputArea->layout()->itemAt(i)->widget();
+						if(auto output = dynamic_cast<ReplOutput*>(obj))
+							output->showDetails();
+					}
+				});
+
+				toolBarLayout.setAlignment(Qt::AlignLeft);
+				toolBarLayout.setSizeConstraint(QLayout::SetFixedSize);
+				toolBarLayout.addWidget(&minimizeAllBtn);
+				toolBarLayout.addWidget(&maximizeAllBtn);
+
+				layout.addLayout(&toolBarLayout);
 				layout.addWidget(&scrollArea);
 			}
 
 			void addWidget(QWidget *widget){
+				emit minimizeAllBtn.click();
 				widget->setParent(outputArea);
 				outputArea->layout()->addWidget(widget);
+				scrollArea.ensureWidgetVisible(widget, 0, 0);
+				scrollArea.verticalScrollBar()->setSliderPosition(scrollArea.verticalScrollBar()->maximum());
 			}
 
 		private:
 			QVBoxLayout layout;
 			QScrollArea scrollArea;
+			QHBoxLayout toolBarLayout;
+			QPushButton minimizeAllBtn, maximizeAllBtn;
 			QWidget *outputArea;
 	};
 
@@ -203,7 +252,9 @@ namespace ile{
 			void outputResult(ilang::TypeData &typeData, ilang::ExprPtr input, ilang::ResultPtr result){
 				auto resultStr = result->toString() + "\n";
 				auto outStr = QString::fromStdString(resultStr);
-				output->addWidget(new ReplOutput(typeData, std::move(input), std::move(result)));
+				auto replOutput = new ReplOutput(typeData, std::move(input), std::move(result));
+				replOutput->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
+				output->addWidget(replOutput);
 				/*
 				auto cursor = output->textCursor();
 				cursor.beginEditBlock();
@@ -236,9 +287,11 @@ namespace ile{
 				replLine.setFont(monoidFont);
 
 				QFontMetrics fontMetrics(monoidFont);
-				replLine.setFixedHeight(fontMetrics.height() + fontMetrics.lineSpacing());
+				replLine.setFixedHeight(fontMetrics.height() * 2 + (fontMetrics.lineSpacing() / 2));
 
-				layout.setAlignment(Qt::AlignTop);
+				output.setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+
+				layout.setAlignment(Qt::AlignBottom);
 				layout.addWidget(&output);
 				layout.addWidget(&replLine);
 			}
